@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import io from 'socket.io-client';
 
 import classes from './Main.module.scss';
 
 import api from '../services/api';
 
 import dislike from '../assets/dislike.svg';
+import itsamatch from '../assets/itsamatch.png';
 import like from '../assets/like.svg';
 import logo from '../assets/logo.svg';
 
 const Main = props => {
   const [users, setUsers] = useState([]);
+  const [matchDev, setMatchDev] = useState(null);
 
   useEffect(() => {
     api.get('/devs', {
@@ -21,15 +24,25 @@ const Main = props => {
       .catch(error => console.log(error));
   }, [props.match.params.id]);
 
+  useEffect(() => {
+  	const socket = io('http://localhost:3030', {
+  		query: { user: props.match.params.id }
+  	});
+
+  	socket.on('match', dev => {
+  		setMatchDev(dev);
+  	});
+  }, [props.match.params.id]);
+
   const handleLike = id => {
-    api.post(`/devs/${id}/likes`, {
+    api.post(`/devs/${id}/likes`, null, {
       headers: { user: props.match.params.id }
     }).then(request => setUsers(users.filter(user => user._id !== id)))
       .catch(error => console.log(error));
   };
 
   const handleDislike = id => {
-    api.post(`/devs/${id}/dislikes`, {
+    api.post(`/devs/${id}/dislikes`, null, {
       headers: { user: props.match.params.id }
     }).then(request => setUsers(users.filter(user => user._id !== id)))
       .catch(error => console.log(error));
@@ -65,6 +78,15 @@ const Main = props => {
           <div className={classes.Empty}>Acabou :(</div>
         )
       }
+      { matchDev && (
+      	<div className={classes.MatchContainer}>
+      		<img src={itsamatch} alt="It's a match" />
+      		<img className={classes.Avatar} src={matchDev.avatar} alt={matchDev.name} />
+      		<strong>{matchDev.name}</strong>
+      		<p>{matchDev.bio}</p>
+      		<button type="button" onClick={() => setMatchDev(null)}>FECHAR</button>
+      	</div>
+      )}
     </div>
   );
 }
